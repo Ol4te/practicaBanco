@@ -10,7 +10,7 @@ import java.util.List;
 @AllArgsConstructor
 @Builder
 public class Cliente {
-    private String id;
+    private Long id;
     private String dni;
     private String nombre;
     private String apellidos;
@@ -24,6 +24,7 @@ public class Cliente {
         this.cuentas.add(cuentaNueva);
     }
 
+    //TODO añadir verificar id y dni y generar ID nuevo
     //TODO quitar una cuenta requiere un procedimiento mas complejo por ejemplo conmprobar que la Cuenta haya sido cancelada para que no haya cuentas sin clientes
 
 }
