@@ -153,40 +153,89 @@ public class DAOCuenta {
     }
 
 
-    public boolean removeTitular(Long idCuenta, Long idCliente) throws SQLException{
-        if (idCuenta == null || idCliente == null){
+    public boolean removeTitular(Long idCuenta, Long idCliente) throws SQLException {
+        if (idCuenta == null || idCliente == null) {
             throw new IllegalArgumentException("ERROR: Se han introducido valores nulos");
         }
         String sqlClientes = "Select count(*) from cliente_cuenta where cuenta_id = ?";
         String sqlBorrarCliente = "Delete from cliente_cuenta where cuenta_id = ? and cliente_id= ?";
 
-        try (Connection conexion = ConexionBD.getConnection();
-        PreparedStatement psqlContarClientes = conexion.prepareStatement(sqlClientes);
-        PreparedStatement psqlBorrarCliente = conexion.prepareStatement(sqlBorrarCliente)){
+        try (Connection conexion = ConexionBD.getConnection()) {
 
             //Lo MAS Importante
             conexion.setAutoCommit(false);
 
-            psqlContarClientes.setLong(1, idCuenta);
+            try (PreparedStatement psqlContarClientes = conexion.prepareStatement(sqlClientes);
+                 PreparedStatement psqlBorrarCliente = conexion.prepareStatement(sqlBorrarCliente)) {
 
-            try(ResultSet numero_clientes = psqlContarClientes.executeQuery()){
-                if(numero_clientes.next() && numero_clientes.getInt(1) <= 1){
-                    conexion.rollback();
-                    throw new IllegalStateException("No se puede eliminar el único titular de la cuenta");
+                psqlContarClientes.setLong(1, idCuenta);
+
+                try (ResultSet numero_clientes = psqlContarClientes.executeQuery()) {
+                    if (numero_clientes.next() && numero_clientes.getInt(1) <= 1) {
+                        conexion.rollback();
+                        throw new IllegalStateException("No se puede eliminar el único titular de la cuenta");
+                    }
                 }
+
+                psqlBorrarCliente.setLong(1, idCuenta);
+                psqlBorrarCliente.setLong(2, idCliente);
+                int filasAfectadas = psqlBorrarCliente.executeUpdate();
+                conexion.commit();
+                if (filasAfectadas > 0) {
+                    return true;
+                }
+
+            } catch (SQLException e) {
+                conexion.rollback();
+                throw e;
             }
 
-            psqlBorrarCliente.setLong(1, idCuenta);
-            psqlBorrarCliente.setLong(2, idCliente);
-            int filasAfectadas = psqlBorrarCliente.executeUpdate();
-            conexion.commit();
-            if(filasAfectadas > 0){
-                return true;
-            }
-
+            return false;
         }
+    }
 
-        return false;
+    public boolean borrarCuentaCompleta(Long idCuenta) throws SQLException{
+        String sqlComprobarSaldo = "Select saldo from cuenta where id = ?";
+        String sqlBorrarCuenta = "Delete from cuenta where id = ?";
+
+        try(Connection conexion = ConexionBD.getConnection()){
+            conexion.setAutoCommit(false);
+
+
+            //1. Comprobamos que la cuenta no tenga saldo
+            try(PreparedStatement psqlSaldo = conexion.prepareStatement(sqlComprobarSaldo);
+                PreparedStatement psqlBorrarCuenta = conexion.prepareStatement(sqlBorrarCuenta)){
+                psqlSaldo.setLong(1, idCuenta);
+                try(ResultSet rsSaldo = psqlSaldo.executeQuery()){
+                    if(rsSaldo.next()){
+                        double saldo = rsSaldo.getDouble("saldo");
+                        if(saldo != 0.0){
+                            conexion.rollback();
+                            throw new IllegalStateException("No se pueden borrar cuentas con saldo");
+                        }
+                        } else {
+                        conexion.rollback();
+                        return false;
+                    }
+                }
+
+                //2. Preparamos el borrado de la cuenta
+                psqlBorrarCuenta.setLong(1, idCuenta);
+
+                int filas_afectadas = psqlBorrarCuenta.executeUpdate();
+                conexion.commit();
+                if(filas_afectadas>0){
+                    return true;
+                } else {
+                    return false;
+                }
+
+
+            }catch(SQLException e){
+                conexion.rollback();
+                throw e;
+            }
+        }
     }
 
 }

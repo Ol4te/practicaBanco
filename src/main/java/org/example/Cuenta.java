@@ -1,9 +1,6 @@
 package org.example;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.ToString;
+import lombok.*;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -16,6 +13,7 @@ public class Cuenta {
     private String iban;
     private double saldo;
 
+    @EqualsAndHashCode.Exclude
     @ToString.Exclude //evita bucle infinito StackOVerFLow
     private List<Cliente> titulares = new ArrayList<>();
 
