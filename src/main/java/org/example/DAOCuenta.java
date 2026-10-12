@@ -1,6 +1,8 @@
 package org.example;
 
 import java.sql.*;
+import java.util.ArrayList;
+import java.util.List;
 
 public class DAOCuenta {
 
@@ -72,6 +74,119 @@ public class DAOCuenta {
             }
             throw new IllegalArgumentException("No se pudo asociar: la cuenta o el cliente indicados no existen.");
         }
+    }
+
+    public Cuenta buscarCuentaPorId(Long id_cuenta) throws SQLException{
+       if(id_cuenta == null){
+           throw new IllegalArgumentException("El Id debe ser válido");
+       }
+
+       String sql = "Select id, iban, saldo from cuenta where id = ?";
+       String sqlTitulares = "Select c.id, c.dni, c.nombre, c.apellidos from cliente c "+ "inner join cliente_cuenta cc "+
+               "on c.id = cc.cliente_id "+ "where cc.cuenta_id= ?";
+
+       List<Cliente> lista_titulares = new ArrayList<>();
+
+       try(Connection conexion = ConexionBD.getConnection();
+       PreparedStatement obtenerCuenta = conexion.prepareStatement(sql);
+       PreparedStatement obtenerClientes = conexion.prepareStatement(sqlTitulares))
+       {
+           obtenerCuenta.setLong(1, id_cuenta);
+           ResultSet rs = obtenerCuenta.executeQuery();
+
+            if(!rs.next()) {
+                   return null; //Devolvemos cuenta nula
+               }
+            Long id_cuenta_encontrada= rs.getLong("id");
+            String iban_encontrada = rs.getString("iban");
+            Double saldo_encontrado = rs.getDouble("saldo");
+
+            //Ahora los clientes
+           obtenerClientes.setLong(1, id_cuenta);
+           ResultSet titulares_resultset = obtenerClientes.executeQuery();
+
+           while(titulares_resultset.next()){
+               Cliente cliente = Cliente.builder().id(titulares_resultset.getLong("id")).
+                       dni(titulares_resultset.getString("dni")).
+                               nombre(titulares_resultset.getString("nombre"))
+                       .apellidos(titulares_resultset.getString("apellidos"))
+                       .build();
+                lista_titulares.add(cliente);
+           }
+
+           if (lista_titulares.isEmpty()){
+               throw new IllegalStateException("Error en la base de datos. Cuenta sin clientes.");
+           }
+            Cuenta encontrada = Cuenta.builder().iban(iban_encontrada).saldo(saldo_encontrado).titularPrincipal(lista_titulares.get(0)).build();
+           encontrada.setId(id_cuenta_encontrada); //Se lo pasamos a Java no a la base de datos por lo que no cambiamos nada
+
+           for (int i = 1; i< lista_titulares.size(); i++){
+               encontrada.añadirCliente(lista_titulares.get(i));
+           }
+           encontrada.setTitulares(lista_titulares);
+           return encontrada;
+       }catch (SQLException e){
+           throw e;
+       }
+
+    }
+
+    public boolean actualizarSaldo(Long idCuenta, double saldoActulizado) throws SQLException{
+
+        if(idCuenta == null){
+            throw new IllegalArgumentException("ERROR: Se ha introducido un ID nulo.");
+        }
+
+        String sql = "Update cuenta set saldo = ? where id = ?";
+
+        try(Connection conexion = ConexionBD.getConnection();
+        PreparedStatement psql = conexion.prepareStatement(sql)){
+            psql.setDouble(1, saldoActulizado);
+            psql.setLong(2, idCuenta);
+            if (psql.executeUpdate() > 0){
+                return true;
+            }
+        }catch (SQLException e){
+            throw e;
+        }
+        return false;
+    }
+
+
+    public boolean removeTitular(Long idCuenta, Long idCliente) throws SQLException{
+        if (idCuenta == null || idCliente == null){
+            throw new IllegalArgumentException("ERROR: Se han introducido valores nulos");
+        }
+        String sqlClientes = "Select count(*) from cliente_cuenta where cuenta_id = ?";
+        String sqlBorrarCliente = "Delete from cliente_cuenta where cuenta_id = ? and cliente_id= ?";
+
+        try (Connection conexion = ConexionBD.getConnection();
+        PreparedStatement psqlContarClientes = conexion.prepareStatement(sqlClientes);
+        PreparedStatement psqlBorrarCliente = conexion.prepareStatement(sqlBorrarCliente)){
+
+            //Lo MAS Importante
+            conexion.setAutoCommit(false);
+
+            psqlContarClientes.setLong(1, idCuenta);
+
+            try(ResultSet numero_clientes = psqlContarClientes.executeQuery()){
+                if(numero_clientes.next() && numero_clientes.getInt(1) <= 1){
+                    conexion.rollback();
+                    throw new IllegalStateException("No se puede eliminar el único titular de la cuenta");
+                }
+            }
+
+            psqlBorrarCliente.setLong(1, idCuenta);
+            psqlBorrarCliente.setLong(2, idCliente);
+            int filasAfectadas = psqlBorrarCliente.executeUpdate();
+            conexion.commit();
+            if(filasAfectadas > 0){
+                return true;
+            }
+
+        }
+
+        return false;
     }
 
 }
