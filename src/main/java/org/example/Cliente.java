@@ -6,9 +6,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Data
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
 public class Cliente {
     private Long id;
     private String dni;
@@ -17,8 +14,23 @@ public class Cliente {
 
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
-    @Builder.Default
     private List<Cuenta> cuentas = new ArrayList<>();
+
+    // Constructor blindado: ningún Cliente puede nacer sin DNI o sin nombre
+    @Builder
+    public Cliente(Long id, String dni, String nombre, String apellidos) {
+        if (dni == null || dni.isBlank()) {
+            throw new IllegalArgumentException("El DNI del cliente es obligatorio.");
+        }
+        if (nombre == null || nombre.isBlank()) {
+            throw new IllegalArgumentException("El nombre del cliente es obligatorio.");
+        }
+        this.id = id;
+        this.dni = dni;
+        this.nombre = nombre;
+        this.apellidos = apellidos;
+        this.cuentas = new ArrayList<>();
+    }
 
     public void añadirCuenta(Cuenta cuentaNueva){
         if(cuentaNueva == null){
@@ -36,8 +48,5 @@ public class Cliente {
             cuentaNueva.getTitulares().add(this);
         }
     }
-
-
-    //TODO quitar una cuenta requiere un procedimiento mas complejo por ejemplo conmprobar que la Cuenta haya sido cancelada para que no haya cuentas sin clientes
 
 }

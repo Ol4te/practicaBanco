@@ -11,6 +11,21 @@ public class DAOCuenta {
 
     //1. Crear Clientes y Cuenta, al crear una cuenta se asocia siempre un titular
 
+    public Cuenta buscarCuentaPorIban(String iban) throws SQLException {
+        String sql = "SELECT id FROM cuenta WHERE iban = ?";
+        try (Connection conexion = ConexionBD.getConnection();
+             PreparedStatement psql = conexion.prepareStatement(sql)) {
+            psql.setString(1, iban);
+            try (ResultSet rs = psql.executeQuery()) {
+                if (rs.next()) {
+                    // Reutilizamos el método que ya tienes
+                    return buscarCuentaPorId(rs.getLong("id"));
+                }
+            }
+        }
+        return null;
+    }
+
     public Cuenta crearCuenta(Cuenta cuenta, Long clienteId) throws SQLException{
         if(clienteId == null){
             throw new IllegalArgumentException("Se requiere un id de cliente");
