@@ -19,8 +19,28 @@ El codigo se divide en capas logicas para aislar la persistencia de la interfaz:
 - **Vista (Interfaz):** Clase AppBanco. Interactua por consola con el usuario, solicitando datos y mostrando resultados de forma aislada.
 
 ## 3. Despliegue y Pruebas
+##  Cómo ejecutarlo
 
-1. Abrir MySQL Workbench.
-2. Localizar y ejecutar el script SQL adjunto en la carpeta `resources` para generar la base de datos de prueba (`banco`) y crear la estructura relacional.
-3. Verificar que las credenciales de acceso (usuario y contraseña) coinciden en la clase `ConexionBD`.
-4. Ejecutar la clase principal `AppBanco` para iniciar el menu de consola.
+Requisitos: **Java 21**, **Maven** (o IntelliJ IDEA) y **Docker Desktop**.
+
+### Opción A: con Docker (recomendada, no hace falta instalar MySQL)
+
+```bash
+# 1. Levantar MySQL con la base de datos y los datos de prueba ya cargados
+docker compose up -d --wait
+
+# 2. Ejecutar la clase AppBanco (desde IntelliJ)
+
+# 3. Al terminar, apagar la base de datos
+docker compose down
+```
+Cada vez que se levanta, la base de datos parte de los mismos datos de prueba. Los cambios que hagas no se conservan tras `docker compose down`.
+
+> Si ya tienes un MySQL instalado en tu ordenador usando el puerto 3306, páralo antes de ejecutar Docker.
+
+### Opción B: con MySQL instalado (MySQL Workbench)
+
+1. Abrir MySQL Workbench y ejecutar el script `src/main/resources/banco_practica1.sql`.
+2. Comprobar que el usuario y la contraseña de la clase `ConexionBD` coinciden con los de tu MySQL.
+3. Ejecutar la clase `AppBanco`.
+
