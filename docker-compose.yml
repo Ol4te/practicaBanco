@@ -1,0 +1,15 @@
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: banco-mysql
+    environment:
+      MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+    ports:
+      - "3306:3306"
+    volumes:
+      - ./src/main/resources/banco_practica1.sql:/docker-entrypoint-initdb.d/01-banco.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
